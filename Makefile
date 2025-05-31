@@ -11,9 +11,18 @@ OBJDIR = objs
 LIBDIR = lib
 
 STATIC_LIB_NAME = libsha512.a
-SHARED_LIB_NAME = libsha512.so
+ifeq ($(OS),Windows_NT)
+    SHARED_LIB_NAME = libsha512.dll
+    # For linking, Windows uses .dll, Linux uses .so. Adjust as needed.
+    # The -l:libname.dll syntax is common for MinGW.
+    # For runtime, you still need to ensure .dlls are in PATH or same dir.
+else
+    SHARED_LIB_NAME = libsha512.so
+endif
 STATIC_LIB = $(addprefix $(LIBDIR)/, $(STATIC_LIB_NAME))
 SHARED_LIB = $(addprefix $(LIBDIR)/, $(SHARED_LIB_NAME))
+
+SHA512_OBJ = $(OBJDIR)/sha512.o
 
 all: $(STATIC_LIB) $(SHARED_LIB)
 
@@ -26,12 +35,14 @@ $(LIBDIR):
 $(OBJDIR)/sha512.o: src/sha512.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Rule to create the static library
-$(STATIC_LIB): $(OBJDIR)/sha512.o | $(LIBDIR)
+$(SHA512_OBJ): src/sha512.c | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(STATIC_LIB): $(SHA512_OBJ) | $(LIBDIR)
 	ar rcs $@ $^
 
-$(SHARED_LIB): | $(LIBDIR)
-	$(CC) $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) src/sha512.c
+$(SHARED_LIB): $(SHA512_OBJ) | $(LIBDIR)
+	$(CC) $(CFLAGS) -shared -o $@ $< $(LDFLAGS)
 
 test:
 	python write_tests.py
