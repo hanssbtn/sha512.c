@@ -23,7 +23,11 @@ $(OBJDIR):
 $(LIBDIR):
 	@mkdir -p $(LIBDIR)
 
-$(STATIC_LIB): | $(LIBDIR)
+$(OBJDIR)/sha512.o: src/sha512.c | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Rule to create the static library
+$(STATIC_LIB): $(OBJDIR)/sha512.o | $(LIBDIR)
 	ar rcs $@ $^
 
 $(SHARED_LIB): | $(LIBDIR)
@@ -35,14 +39,9 @@ test:
 	$(CC) $(CFLAGS) src/sha512.c tests/sha384_test.c -o test384
 
 clean_test:
-	rm -f $(TEST_FILES)
-	rm -f out.txt
-	rm -f test*.exe
+	rm -f $(TEST_FILES) out.txt test*.exe objs/*
 
 clean_all:
-	rm -f $(TEST_FILES)
-	rm -f out.txt
-	rm -f test*.exe
-	rm -f lib/*
+	rm -f $(TEST_FILES) out.txt test*.exe lib/* objs/*
 
 .PHONY: test clean_all clean_test

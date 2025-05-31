@@ -127,12 +127,10 @@ int32_t sha512_ctx_update(sha512_context_t *const ctx, const void *data, ssize_t
 	ssize_t l = ctx->current_block.length;
 	if (l + byte_len < 0) return -3;
 	if (l + byte_len >= 128) {
-		// printf("l:        %lld byte(s)\nbyte_len: %lld byte(s)\ntotal:    %lld byte(s)\n", l, byte_len, l + byte_len);
 		const char *ptr = (const char*)data;
 		
 		// calculate number of bytes required to fill current_block
 		ssize_t remaining_bytes = 128 - l;
-		// printf("remaining bytes: %lld byte(s)\n", remaining_bytes);
 		// make length of current_block equal to 128 bytes (1024 bits)
 		memcpy(ctx->current_block.w8 + l, ptr, remaining_bytes);
 		assert(l + remaining_bytes == 128);
@@ -144,7 +142,6 @@ int32_t sha512_ctx_update(sha512_context_t *const ctx, const void *data, ssize_t
 		assert(ctx->current_block.length == 0);
 
 		byte_len -= remaining_bytes;
-		// printf("byte_len: %lld byte(s)\n", byte_len);
 		// return if there is no more bytes to process
 		if (!byte_len) return 0;
 		
@@ -152,8 +149,6 @@ int32_t sha512_ctx_update(sha512_context_t *const ctx, const void *data, ssize_t
 		ptr += remaining_bytes;
 		ssize_t blocks = byte_len / 128;
 		remaining_bytes = byte_len % 128;
-		// printf("blocks:          %lld block(s)\n", blocks);
-		// printf("remaining_bytes: %lld byte(s)\n", remaining_bytes);
 
 		// process remaining blocks
 		for (ssize_t i = 0; i < blocks; ++i) {
@@ -165,9 +160,7 @@ int32_t sha512_ctx_update(sha512_context_t *const ctx, const void *data, ssize_t
 		ctx->current_block.length = remaining_bytes;
 		memcpy(ctx->current_block.w8, ptr, remaining_bytes);
 	} else {
-		// printf("Appending %lld byte(s) to current block\n", byte_len);
 		ctx->current_block.length += byte_len;
-		// printf("Total length: %llu byte(s)\n", ctx->current_block.length);
 		memcpy(ctx->current_block.w8 + l, data, byte_len);
 	}
 
