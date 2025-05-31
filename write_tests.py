@@ -1,0 +1,200 @@
+import random
+import hashlib
+
+TEST_COUNT = 10
+TEST_FOLDER = "tests"
+CHARS = "".join([chr(x) for x in range(256)])
+l = len(CHARS)
+def main():
+	global TEST_FOLDER
+	global TEST_COUNT
+	global CHARS
+	global l
+	idx = 0
+	strlen = random.randint(0, 16384)
+	string = "".join([CHARS[random.randint(0, l - 1)] for n in range(strlen)])
+	hashes = []
+	for idx in range(TEST_COUNT):
+		hash = hashlib.sha512()
+		with open(f"{TEST_FOLDER}/sha512_test_{idx}.bin", "wb") as tf:
+			k = random.randint(1, 100)
+			m = 0
+			for i in range(k):
+				strlen = random.randint(0, 16384)
+				string = "".join([CHARS[random.randint(0, l - 1)] for n in range(strlen)])
+				encoded_string = string.encode()
+				m += tf.write(encoded_string)
+		with open(f"{TEST_FOLDER}/sha512_test_{idx}.bin", "rb") as tf:
+			while 1:
+				b = tf.read(8192)
+				if (len(b) == 0): 
+					break
+				hash.update(b)
+			h = hash.hexdigest().upper()
+			print(f"h512: {h}")
+			hashes.append(h)
+	with open(f"{TEST_FOLDER}/sha512_test.c", "w") as f:
+		f.write("#include \"../include/sha512.h\"\n")
+		f.write("#include <assert.h>\n")
+		f.write(f"\nconst char *const fmt = \"{"%02X" * 64}\";\n\n")
+		f.write("int32_t main(void) {\n")		
+		idx = 0
+		f.write(f"\tconst char *hash = \"{hashes[0]}\";\n")
+		f.write(f"\tsha512_context_t *ctx = malloc(sizeof(sha512_context_t));\n")
+		f.write("\tsha512_ctx_init(ctx);\n")
+		f.write("\tuint8_t buf[8192 + 1] = { };\n")
+		f.write("\tuint8_t res[64] = { };\n")
+		f.write("\tchar string[130] = { };\n")
+		f.write(f"\tFILE *file = fopen(\"{f"{TEST_FOLDER}/sha512_test_{idx}.bin"}\", \"rb\");\n")
+		f.write("\tif (!file) {\n")
+		f.write(f"\t\tfprintf(stderr, \"Cannot open {f"sha512_test_{idx}.bin"}. Please run the test from the project root directory.\\n\");\n")
+		f.write("\t\tfree(ctx);\n")
+		f.write(f"\t\treturn -{idx + 1};\n")
+		f.write("\t}\n")
+		f.write("\tfor (;;) {\n")
+		f.write("\t\tssize_t len = fread(buf, sizeof(uint8_t), 8192ULL, file);\n")
+		f.write("\t\tif (!len) break;\n")
+		f.write("\t\tassert(sha512_ctx_update(ctx, buf, len) == 0);\n")
+		f.write("\t}\n")
+		f.write("\tassert(sha512_ctx_final(ctx, res, 64) == 0);\n")
+		f.write(f"\tsnprintf(string, 129ULL, fmt, {",".join([f"res[{i}]" for i in range(64)])});\n")
+		f.write(f"\tstring[129] = '\\0';\n")
+		f.write(f"\tprintf(\"%s\\n\", string);\n")
+		f.write(f"\tint32_t result = memcmp(string, hash, 128ULL);\n")
+		f.write("\tif (result) {\n")
+		f.write(f"\t\tfprintf(stderr, \"Test Case {idx} FAILED (got %d)\\n\", result);\n")
+		f.write(f"\t\tprintf(\"hash: %s\\n\", hash);\n")
+		f.write(f"\t\tprintf(\"string: %s\\n\", string);\n")
+		f.write("\t\tfree(ctx);\n")
+		f.write("\t\tfclose(file);\n")
+		f.write(f"\t\treturn -{idx + 1};\n")
+		f.write("\t}\n")
+		f.write("\tfclose(file);\n\n")
+		for idx in range(1, TEST_COUNT):
+			f.write(f"\thash = \"{hashes[idx]}\";\n")
+			f.write("\tsha512_ctx_init(ctx);\n")
+			f.write(f"\tfile = fopen(\"{f"{TEST_FOLDER}/sha512_test_{idx}.bin"}\", \"rb\");\n")
+			f.write("\tif (!file) {\n")
+			f.write(f"\t\tfprintf(stderr, \"Cannot open {f"sha512_test_{idx}.bin"}. Please run the test from the project root directory.\\n\");\n")
+			f.write("\t\tfree(ctx);\n")
+			f.write(f"\t\treturn -{idx + 1};\n")
+			f.write("\t}\n")
+			f.write("\tfor (;;) {\n")
+			f.write(f"\t\tssize_t len = fread(buf, sizeof(uint8_t), 8192ULL, file);\n")
+			f.write("\t\tif (!len) break;\n")
+			f.write("\t\tassert(sha512_ctx_update(ctx, buf, len) == 0);\n")
+			f.write("\t}\n")
+			f.write("\tassert(sha512_ctx_final(ctx, res, 64) == 0);\n")
+			f.write(f"\tsnprintf(string, 129ULL, fmt, {",".join([f"res[{i}]" for i in range(64)])});\n")
+			f.write(f"\tstring[129] = '\\0';\n")
+			f.write(f"\tprintf(\"%s\\n\", string);\n")
+			f.write(f"\tresult = memcmp(string, hash, 128ULL);\n")
+			f.write("\tif (memcmp(string, hash, 128ULL)) {\n")
+			f.write(f"\t\tfprintf(stderr, \"Test Case {idx} FAILED (got %d)\\n\", result);\t;\n")
+			f.write(f"\t\tprintf(\"hash: %s\\n\", hash);\n")
+			f.write(f"\t\tprintf(\"string: %s\\n\", string);\n")
+			f.write("\t\tfree(ctx);\n")
+			f.write("\t\tfclose(file);\n")
+			f.write(f"\t\treturn -{idx + 1};\n")
+			f.write("\t}\n")
+			f.write("\tfclose(file);\n\n")
+		f.write("\tfree(ctx);\n")
+		f.write("\tprintf(\"DONE\\n\");\n")
+		f.write("\treturn 0;\n")
+		f.write("}")
+
+	idx = 0
+	strlen = random.randint(0, 16384)
+	string = "".join([CHARS[random.randint(0, l - 1)] for n in range(strlen)])
+	hashes = []
+	for idx in range(TEST_COUNT):
+		hash = hashlib.sha384()
+		with open(f"{TEST_FOLDER}/sha384_test_{idx}.bin", "wb") as tf:
+			k = random.randint(1, 100)
+			m = 0
+			for i in range(k):
+				strlen = random.randint(0, 16384)
+				string = "".join([CHARS[random.randint(0, l - 1)] for n in range(strlen)])
+				encoded_string = string.encode()
+				m += tf.write(encoded_string)
+		with open(f"{TEST_FOLDER}/sha384_test_{idx}.bin", "rb") as tf:
+			while 1:
+				b = tf.read(8192)
+				if (len(b) == 0): 
+					break
+				hash.update(b)
+			h = hash.hexdigest().upper()
+			print(f"h384: {h}")
+			hashes.append(h)
+	with open(f"{TEST_FOLDER}/sha384_test.c", "w") as f:
+		f.write("#include \"../include/sha512.h\"\n")
+		f.write("#include <assert.h>\n")
+		f.write(f"\nconst char *const fmt = \"{"%02X" * 48}\";\n\n")
+		f.write("int32_t main(void) {\n")		
+		idx = 0
+		f.write(f"\tconst char *hash = \"{hashes[0]}\";\n")
+		f.write(f"\tsha384_context_t *ctx = malloc(sizeof(sha512_context_t));\n")
+		f.write("\tsha384_ctx_init(ctx);\n")
+		f.write("\tuint8_t buf[8192 + 1] = { };\n")
+		f.write("\tuint8_t res[48] = { };\n")
+		f.write("\tchar string[98] = { };\n")
+		f.write(f"\tFILE *file = fopen(\"{f"{TEST_FOLDER}/sha384_test_{idx}.bin"}\", \"rb\");\n")
+		f.write("\tif (!file) {\n")
+		f.write(f"\t\tfprintf(stderr, \"Cannot open {f"sha384_test_{idx}.bin"}. Please run the test from the project root directory.\\n\");\n")
+		f.write("\t\tfree(ctx);\n")
+		f.write(f"\t\treturn -{idx + 1};\n")
+		f.write("\t}\n")
+		f.write("\tfor (;;) {\n")
+		f.write("\t\tssize_t len = fread(buf, sizeof(uint8_t), 8192ULL, file);\n")
+		f.write("\t\tif (!len) break;\n")
+		f.write("\t\tassert(sha384_ctx_update(ctx, buf, len) == 0);\n")
+		f.write("\t}\n")
+		f.write("\tassert(sha384_ctx_final(ctx, res, 48) == 0);\n")
+		f.write(f"\tsnprintf(string, 97ULL, fmt, {",".join([f"res[{i}]" for i in range(48)])});\n")
+		f.write(f"\tstring[97] = '\\0';\n")
+		f.write(f"\tprintf(\"%s\\n\", string);\n")
+		f.write(f"\tint32_t result = memcmp(string, hash, 96ULL);\n")
+		f.write("\tif (result) {\n")
+		f.write(f"\t\tfprintf(stderr, \"Test Case {idx} FAILED (got %d)\\n\", result);\n")
+		f.write(f"\t\tprintf(\"hash: %s\\n\", hash);\n")
+		f.write(f"\t\tprintf(\"string: %s\\n\", string);\n")
+		f.write("\t\tfree(ctx);\n")
+		f.write("\t\tfclose(file);\n")
+		f.write(f"\t\treturn -{idx + 1};\n")
+		f.write("\t}\n")
+		f.write("\tfclose(file);\n\n")
+		for idx in range(1, TEST_COUNT):
+			f.write(f"\thash = \"{hashes[idx]}\";\n")
+			f.write("\tsha384_ctx_init(ctx);\n")
+			f.write(f"\tfile = fopen(\"{f"{TEST_FOLDER}/sha384_test_{idx}.bin"}\", \"rb\");\n")
+			f.write("\tif (!file) {\n")
+			f.write(f"\t\tfprintf(stderr, \"Cannot open {f"sha384_test_{idx}.bin"}. Please run the test from the project root directory.\\n\");\n")
+			f.write("\t\tfree(ctx);\n")
+			f.write(f"\t\treturn -{idx + 1};\n")
+			f.write("\t}\n")
+			f.write("\tfor (;;) {\n")
+			f.write(f"\t\tssize_t len = fread(buf, sizeof(uint8_t), 8192ULL, file);\n")
+			f.write("\t\tif (!len) break;\n")
+			f.write("\t\tassert(sha384_ctx_update(ctx, buf, len) == 0);\n")
+			f.write("\t}\n")
+			f.write("\tassert(sha384_ctx_final(ctx, res, 48) == 0);\n")
+			f.write(f"\tsnprintf(string, 129ULL, fmt, {",".join([f"res[{i}]" for i in range(48)])});\n")
+			f.write(f"\tstring[129] = '\\0';\n")
+			f.write(f"\tprintf(\"%s\\n\", string);\n")
+			f.write(f"\tresult = memcmp(string, hash, 96ULL);\n")
+			f.write("\tif (result) {\n")
+			f.write(f"\t\tfprintf(stderr, \"Test Case {idx} FAILED (got %d)\\n\", result);\t;\n")
+			f.write(f"\t\tprintf(\"hash: %s\\n\", hash);\n")
+			f.write(f"\t\tprintf(\"string: %s\\n\", string);\n")
+			f.write("\t\tfree(ctx);\n")
+			f.write("\t\tfclose(file);\n")
+			f.write(f"\t\treturn -{idx + 1};\n")
+			f.write("\t}\n")
+			f.write("\tfclose(file);\n\n")
+		f.write("\tfree(ctx);\n")
+		f.write("\tprintf(\"DONE\\n\");\n")
+		f.write("\treturn 0;\n")
+		f.write("}")
+
+if __name__ == "__main__":
+	main()

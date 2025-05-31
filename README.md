@@ -1,0 +1,2 @@
+# sha512.c
+A simple, minimalistic implementation of SHA512 and SHA384 algorithm using C compiled using GCC 15.1.0 on on Windows 10 x86-64. This project is mainly for learning purposes and **SHOULD** not be used in a professional setting.
