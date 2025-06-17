@@ -13,9 +13,6 @@ LIBDIR = lib
 STATIC_LIB_NAME = libsha512.a
 ifeq ($(OS),Windows_NT)
     SHARED_LIB_NAME = libsha512.dll
-    # For linking, Windows uses .dll, Linux uses .so. Adjust as needed.
-    # The -l:libname.dll syntax is common for MinGW.
-    # For runtime, you still need to ensure .dlls are in PATH or same dir.
 else
     SHARED_LIB_NAME = libsha512.so
 endif
@@ -31,9 +28,6 @@ $(OBJDIR):
 
 $(LIBDIR):
 	@mkdir -p $(LIBDIR)
-
-$(OBJDIR)/sha512.o: src/sha512.c | $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
 
 $(SHA512_OBJ): src/sha512.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
